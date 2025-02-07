@@ -414,6 +414,7 @@ unique_ptr<ResponseWrapper> HTTPFileSystem::GetRangeRequest(FileHandle &handle, 
 		    [&](const char *data, size_t data_length) {
 			    if (hfh.state) {
 				    hfh.state->total_bytes_received += data_length;
+				    hfh.state->file_bytes_received[path] += data_length;
 			    }
 			    if (buffer_out != nullptr) {
 				    if (data_length + out_offset > buffer_out_len) {

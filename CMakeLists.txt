@@ -23,6 +23,7 @@ endif()
 project(DuckDB)
 
 find_package(Threads REQUIRED)
+find_package(TBB REQUIRED)
 
 set(DUCKDB_MODULE_BASE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
@@ -756,6 +757,7 @@ endfunction()
 
 function(link_threads LIBRARY)
     target_link_libraries(${LIBRARY} Threads::Threads)
+    target_link_libraries(${LIBRARY} TBB::tbb)
 endfunction()
 
 # Deploys extensions to a local repository (a folder structure that contains the duckdb version + binary arch)

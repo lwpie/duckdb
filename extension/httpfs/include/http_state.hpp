@@ -1,11 +1,15 @@
 #pragma once
 
-#include "duckdb/common/file_opener.hpp"
-#include "duckdb/main/client_context.hpp"
-#include "duckdb/main/client_data.hpp"
 #include "duckdb/common/atomic.hpp"
+#include "duckdb/common/file_opener.hpp"
 #include "duckdb/common/optional_ptr.hpp"
+#include "duckdb/main/client_context.hpp"
 #include "duckdb/main/client_context_state.hpp"
+#include "duckdb/main/client_data.hpp"
+
+#include <fstream>
+#include <iostream>
+#include <tbb/concurrent_unordered_map.h>
 
 namespace duckdb {
 
@@ -89,6 +93,7 @@ public:
 	atomic<idx_t> post_count {0};
 	atomic<idx_t> total_bytes_received {0};
 	atomic<idx_t> total_bytes_sent {0};
+	tbb::concurrent_unordered_map<string, idx_t> file_bytes_received;
 
 	//! Called by the ClientContext when the current query ends
 	void QueryEnd(ClientContext &context) override {

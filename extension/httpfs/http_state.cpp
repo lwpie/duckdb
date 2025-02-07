@@ -1,4 +1,5 @@
 #include "http_state.hpp"
+
 #include "duckdb/main/query_profiler.hpp"
 
 namespace duckdb {
@@ -47,6 +48,16 @@ void CachedFileHandle::Write(const char *buffer, idx_t length, idx_t offset) {
 }
 
 void HTTPState::Reset() {
+	// Write to stats file
+	std::ofstream out("httpfs_stats.txt");
+	idx_t total_bytes = 0;
+	for (auto &entry : file_bytes_received) {
+		total_bytes += entry.second;
+		out << entry.first << " " << entry.second << std::endl;
+	}
+	out << total_bytes << " " << total_bytes_received << " " << total_bytes_sent << std::endl;
+	out.close();
+
 	// Reset Counters
 	head_count = 0;
 	get_count = 0;
@@ -54,6 +65,7 @@ void HTTPState::Reset() {
 	post_count = 0;
 	total_bytes_received = 0;
 	total_bytes_sent = 0;
+	file_bytes_received.clear();
 
 	// Reset cached files
 	cached_files.clear();
@@ -72,8 +84,8 @@ shared_ptr<HTTPState> HTTPState::TryGetState(optional_ptr<FileOpener> opener) {
 }
 
 void HTTPState::WriteProfilingInformation(std::ostream &ss) {
-	string read = "in: " + StringUtil::BytesToHumanReadableString(total_bytes_received);
-	string written = "out: " + StringUtil::BytesToHumanReadableString(total_bytes_sent);
+	string read = "in: " + to_string(total_bytes_received);
+	string written = "out: " + to_string(total_bytes_sent);
 	string head = "#HEAD: " + to_string(head_count);
 	string get = "#GET: " + to_string(get_count);
 	string put = "#PUT: " + to_string(put_count);
