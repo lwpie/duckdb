@@ -200,6 +200,8 @@ typedef idx_t (*table_function_get_batch_index_t)(ClientContext &context, const 
                                                   LocalTableFunctionState *local_state,
                                                   GlobalTableFunctionState *global_state);
 
+typedef string (*table_function_get_file_name_t)(LocalTableFunctionState *local_state);
+
 typedef BindInfo (*table_function_get_bind_info_t)(const optional_ptr<FunctionData> bind_data);
 
 typedef unique_ptr<MultiFileReader> (*table_function_get_multi_file_reader_t)();
@@ -279,6 +281,8 @@ public:
 	table_function_progress_t table_scan_progress;
 	//! (Optional) returns the current batch index of the current scan operator
 	table_function_get_batch_index_t get_batch_index;
+	//! (Optional) returns the current file name of the current scan operator
+	table_function_get_file_name_t get_file_name;
 	//! (Optional) returns extra bind info
 	table_function_get_bind_info_t get_bind_info;
 	//! (Optional) pushes down type information to scanner, returns true if pushdown was successful

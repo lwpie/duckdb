@@ -524,7 +524,14 @@ void PipelineExecutor::StartOperator(PhysicalOperator &op) {
 }
 
 void PipelineExecutor::EndOperator(PhysicalOperator &op, optional_ptr<DataChunk> chunk) {
-	context.thread.profiler.EndOperator(chunk);
+	string file_name = "";
+	if (op.type == PhysicalOperatorType::TABLE_SCAN) {
+		auto &table_scan = op.Cast<PhysicalTableScan>();
+		if (table_scan.function.name == "parquet_scan")
+			file_name = table_scan.file_name.local();
+	}
+
+	context.thread.profiler.EndOperator(chunk, file_name);
 
 	if (chunk) {
 		chunk->Verify();

@@ -8,11 +8,13 @@
 
 #pragma once
 
+#include "duckdb/common/extra_operator_info.hpp"
 #include "duckdb/execution/physical_operator.hpp"
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/planner/table_filter.hpp"
 #include "duckdb/storage/data_table.hpp"
-#include "duckdb/common/extra_operator_info.hpp"
+
+#include <tbb/enumerable_thread_specific.h>
 
 namespace duckdb {
 
@@ -48,6 +50,8 @@ public:
 	vector<Value> parameters;
 	//! Contains a reference to dynamically generated table filters (through e.g. a join up in the tree)
 	shared_ptr<DynamicTableFilterSet> dynamic_filters;
+	//! The file name of the current scan operator
+	mutable tbb::enumerable_thread_specific<std::string> file_name;
 
 public:
 	string GetName() const override;

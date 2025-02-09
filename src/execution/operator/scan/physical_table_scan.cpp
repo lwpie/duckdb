@@ -97,6 +97,11 @@ SourceResultType PhysicalTableScan::GetData(ExecutionContext &context, DataChunk
 	TableFunctionInput data(bind_data.get(), state.local_state.get(), gstate.global_state.get());
 	if (function.function) {
 		function.function(context.client, data, chunk);
+		if (function.get_file_name) {
+			auto &local_state = data.local_state;
+			if (local_state)
+				file_name.local() = function.get_file_name(local_state.get());
+		}
 	} else {
 		if (gstate.in_out_final) {
 			function.in_out_function_final(context, data, chunk);

@@ -8,13 +8,12 @@
 #include "duckdb/common/tree_renderer/text_tree_renderer.hpp"
 #include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/execution/operator/helper/physical_execute.hpp"
+#include "duckdb/execution/operator/scan/physical_table_scan.hpp"
 #include "duckdb/execution/physical_operator.hpp"
 #include "duckdb/main/client_config.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/main/client_data.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
-#include "duckdb/execution/operator/scan/physical_table_scan.hpp"
-
 #include "yyjson.hpp"
 
 #include <algorithm>
@@ -322,7 +321,7 @@ void OperatorProfiler::StartOperator(optional_ptr<const PhysicalOperator> phys_o
 	}
 }
 
-void OperatorProfiler::EndOperator(optional_ptr<DataChunk> chunk) {
+void OperatorProfiler::EndOperator(optional_ptr<DataChunk> chunk, string file_name) {
 	if (!enabled) {
 		return;
 	}
@@ -341,7 +340,7 @@ void OperatorProfiler::EndOperator(optional_ptr<DataChunk> chunk) {
 		}
 		if (ProfilingInfo::Enabled(settings, MetricsType::RESULT_SET_SIZE) && chunk) {
 			auto result_set_size = chunk->GetAllocationSize();
-			info.AddResultSetSize(result_set_size);
+			info.AddResultSetSize(result_set_size, file_name);
 		}
 	}
 	active_operator = nullptr;
@@ -400,6 +399,17 @@ void QueryProfiler::Flush(OperatorProfiler &profiler) {
 		}
 		if (ProfilingInfo::Enabled(profiler.settings, MetricsType::RESULT_SET_SIZE)) {
 			info.AddToMetric<idx_t>(MetricsType::RESULT_SET_SIZE, node.second.result_set_size);
+			if (op.type == PhysicalOperatorType::TABLE_SCAN) {
+				auto &table_scan = op.Cast<PhysicalTableScan>();
+				if (table_scan.function.name == "parquet_scan") {
+					idx_t result_set_size = 0;
+					for (auto &entry : node.second.result_set_sizes) {
+						std::cerr << entry.first << " " << entry.second << std::endl;
+						result_set_size += entry.second;
+					}
+					D_ASSERT(result_set_size != node.second.result_set_size);
+				}
+			}
 		}
 	}
 	profiler.timings.clear();

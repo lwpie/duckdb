@@ -402,6 +402,7 @@ public:
 		                                                                 {"default_value", LogicalType::VARCHAR}}}));
 		table_function.named_parameters["encryption_config"] = LogicalTypeId::ANY;
 		table_function.get_batch_index = ParquetScanGetBatchIndex;
+		table_function.get_file_name = ParquetScanGetFileName;
 		table_function.serialize = ParquetScanSerialize;
 		table_function.deserialize = ParquetScanDeserialize;
 		table_function.get_bind_info = ParquetGetBindInfo;
@@ -783,6 +784,11 @@ public:
 	                                      GlobalTableFunctionState *global_state) {
 		auto &data = local_state->Cast<ParquetReadLocalState>();
 		return data.batch_index;
+	}
+
+	static string ParquetScanGetFileName(LocalTableFunctionState *local_state) {
+		auto &data = local_state->Cast<ParquetReadLocalState>();
+		return data.reader ? data.reader->file_name : "NULL";
 	}
 
 	static void ParquetScanSerialize(Serializer &serializer, const optional_ptr<FunctionData> bind_data_p,
