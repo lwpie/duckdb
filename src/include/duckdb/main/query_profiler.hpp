@@ -44,7 +44,7 @@ struct OperatorInformation {
 	double time;
 	idx_t elements_returned;
 	idx_t result_set_size;
-	tbb::concurrent_unordered_map<string, idx_t> result_set_sizes;
+	tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, idx_t>> result_set_sizes;
 	string name;
 
 	void AddTime(double n_time) {
@@ -55,9 +55,8 @@ struct OperatorInformation {
 		elements_returned += n_elements;
 	}
 
-	void AddResultSetSize(idx_t n_result_set_size, string file_name) {
+	void AddResultSetSize(idx_t n_result_set_size) {
 		result_set_size += n_result_set_size;
-		result_set_sizes[file_name] += n_result_set_size;
 	}
 };
 
@@ -73,7 +72,7 @@ public:
 
 public:
 	DUCKDB_API void StartOperator(optional_ptr<const PhysicalOperator> phys_op);
-	DUCKDB_API void EndOperator(optional_ptr<DataChunk> chunk, string file_name = "");
+	DUCKDB_API void EndOperator(optional_ptr<DataChunk> chunk, PhysicalOperator *op = nullptr);
 
 	//! Adds the timings in the OperatorProfiler (tree) to the QueryProfiler (tree).
 	DUCKDB_API void Flush(const PhysicalOperator &phys_op);

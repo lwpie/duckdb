@@ -321,7 +321,7 @@ void OperatorProfiler::StartOperator(optional_ptr<const PhysicalOperator> phys_o
 	}
 }
 
-void OperatorProfiler::EndOperator(optional_ptr<DataChunk> chunk, string file_name) {
+void OperatorProfiler::EndOperator(optional_ptr<DataChunk> chunk, PhysicalOperator *op) {
 	if (!enabled) {
 		return;
 	}
@@ -332,15 +332,30 @@ void OperatorProfiler::EndOperator(optional_ptr<DataChunk> chunk, string file_na
 	if (!settings.empty()) {
 		auto &info = GetOperatorInfo(*active_operator);
 		if (ProfilingInfo::Enabled(settings, MetricsType::OPERATOR_TIMING)) {
-			op.End();
-			info.AddTime(op.Elapsed());
+			this->op.End();
+			info.AddTime(this->op.Elapsed());
 		}
 		if (ProfilingInfo::Enabled(settings, MetricsType::OPERATOR_CARDINALITY) && chunk) {
 			info.AddReturnedElements(chunk->size());
 		}
 		if (ProfilingInfo::Enabled(settings, MetricsType::RESULT_SET_SIZE) && chunk) {
 			auto result_set_size = chunk->GetAllocationSize();
-			info.AddResultSetSize(result_set_size, file_name);
+
+			string file_name = "";
+			if (op && op->type == PhysicalOperatorType::TABLE_SCAN) {
+				auto &table_scan = op->Cast<PhysicalTableScan>();
+				if (table_scan.function.name == "parquet_scan") {
+					file_name = table_scan.file_name.local();
+					auto cardinality = chunk->size();
+					for (idx_t i = 0; i < table_scan.projection_ids.size(); ++i) {
+						auto &column_id = table_scan.column_ids[table_scan.projection_ids[i]];
+						auto &name = table_scan.names[column_id];
+						info.result_set_sizes[file_name][name] += chunk->data[i].GetAllocationSize(cardinality);
+					}
+				}
+			}
+
+			info.AddResultSetSize(result_set_size);
 		}
 	}
 	active_operator = nullptr;
@@ -402,11 +417,18 @@ void QueryProfiler::Flush(OperatorProfiler &profiler) {
 			if (op.type == PhysicalOperatorType::TABLE_SCAN) {
 				auto &table_scan = op.Cast<PhysicalTableScan>();
 				if (table_scan.function.name == "parquet_scan") {
+					ofstream out("file_stats.txt", ios::app);
 					idx_t result_set_size = 0;
 					for (auto &entry : node.second.result_set_sizes) {
-						std::cerr << entry.first << " " << entry.second << std::endl;
-						result_set_size += entry.second;
+						auto &file_name = entry.first;
+						for (auto &column_entry : entry.second) {
+							auto &column_name = column_entry.first;
+							auto &size = column_entry.second;
+							out << file_name << " " << column_name << " " << size << std::endl;
+							result_set_size += size;
+						}
 					}
+					out.close();
 					D_ASSERT(result_set_size != node.second.result_set_size);
 				}
 			}
