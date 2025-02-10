@@ -344,7 +344,7 @@ void OperatorProfiler::EndOperator(optional_ptr<DataChunk> chunk, PhysicalOperat
 			string file_name = "";
 			if (op && op->type == PhysicalOperatorType::TABLE_SCAN) {
 				auto &table_scan = op->Cast<PhysicalTableScan>();
-				if (table_scan.function.name == "parquet_scan") {
+				if (table_scan.function.name == "parquet_scan" || table_scan.function.name == "read_parquet") {
 					file_name = table_scan.file_name.local();
 					auto cardinality = chunk->size();
 					for (idx_t i = 0; i < table_scan.projection_ids.size(); ++i) {
@@ -416,7 +416,7 @@ void QueryProfiler::Flush(OperatorProfiler &profiler) {
 			info.AddToMetric<idx_t>(MetricsType::RESULT_SET_SIZE, node.second.result_set_size);
 			if (op.type == PhysicalOperatorType::TABLE_SCAN) {
 				auto &table_scan = op.Cast<PhysicalTableScan>();
-				if (table_scan.function.name == "parquet_scan") {
+				if (table_scan.function.name == "parquet_scan" || table_scan.function.name == "read_parquet") {
 					ofstream out("file_stats.txt", ios::app);
 					idx_t result_set_size = 0;
 					for (auto &entry : node.second.result_set_sizes) {
