@@ -15,6 +15,7 @@
 #include "duckdb/common/types/sel_cache.hpp"
 #include "duckdb/common/types/value.hpp"
 #include "duckdb/common/types/value_map.hpp"
+#include "duckdb/common/types/varint.hpp"
 #include "duckdb/common/types/vector_cache.hpp"
 #include "duckdb/common/uhugeint.hpp"
 #include "duckdb/common/vector_operations/vector_operations.hpp"
@@ -22,7 +23,6 @@
 #include "duckdb/storage/buffer/buffer_handle.hpp"
 #include "duckdb/storage/string_uncompressed.hpp"
 #include "fsst.h"
-#include "duckdb/common/types/varint.hpp"
 
 #include <cstring> // strlen() on Solaris
 
@@ -815,7 +815,15 @@ void Vector::Print(idx_t count) const {
 idx_t Vector::GetAllocationSize(idx_t cardinality) const {
 	if (!type.IsNested()) {
 		auto physical_size = GetTypeIdSize(type.InternalType());
-		return cardinality * physical_size;
+		idx_t size = cardinality * physical_size;
+		if (type.InternalType() == PhysicalType::VARCHAR) {
+			size = 0;
+			for (idx_t i = 0; i < cardinality; ++i) {
+				auto value = GetValue(i).GetValueUnsafe<string_t>();
+				size += 8 * value.GetSize();
+			}
+		}
+		return size;
 	}
 	auto internal_type = type.InternalType();
 	switch (internal_type) {
